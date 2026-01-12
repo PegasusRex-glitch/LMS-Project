@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Profile</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='css/navbar.css') }}">
+</head>
+<body>
+    {% include 'dashboard/navbar.html' %}
+
+    <div class="profile-container">
+        <h2>User Profile</h2>
+
+        <!-- LEFT: Profile Photo -->
+        <div class="profile-photo">
+            <img src="{{ url_for('static', path='profile.jpg') }}" alt="Profile Photo">
+            <input type="file" id="profile-upload" hidden>
+            <button onclick="document.getElementById('profile-upload').click()">Change Photo</button>
+        </div>
+
+        <!-- RIGHT: Personal Info & Stream -->
+        <div class="profile-details">
+            <p><strong>Username:</strong> {{ username }}</p>
+            <p><strong>Email:</strong> {{ email }}</p>
+            <p><strong>Member Since:</strong> {{ created_at }}</p>
+            <p><strong>Stream:</strong> {{ profile[4] if profile else 'Null' }}</p>
+
+            <!-- Subjects Display -->
+            <div class="subjects-display">
+                <h4>Subjects</h4>
+                <ul>
+                    {% for sub in subjects %}
+                        <li>{{ sub }}</li>
+                    {% else %}
+                        <li>No subjects added</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- PERSONAL INFO & SUBJECTS FORM -->
+    <div class="upload-section">
+        <h3>Edit Profile</h3>
+        <form method="post" action="/profile">
+            <!-- Personal Info -->
+            <div class="form-group">
+                <label>Full Name</label>
+                <input type="text" name="full_name" value="{{ profile[0] if profile else '' }}" required>
+
+                <label>Age</label>
+                <input type="number" name="age" value="{{ profile[1] if profile else '' }}" required>
+
+                <label>School</label>
+                <input type="text" name="school" value="{{ profile[2] if profile else '' }}">
+
+                <label>Grade</label>
+                <input type="text" name="grade" value="{{ profile[3] if profile else '' }}">
+
+                <label>Stream</label>
+                <input type="text" name="stream" value="{{ profile[4] if profile else '' }}">
+
+                <label>Contact Info</label>
+                <input type="text" name="contact_info" value="{{ profile[8] if profile else '' }}">
+
+                <label>Residential Address</label>
+                <textarea name="address">{{ profile[9] if profile else '' }}</textarea>
+            </div>
+
+            <!-- Dynamic Subjects -->
+            <div class="form-group">
+                <h4>Subjects</h4>
+                <div id="subjects-container">
+                    <input type="text" name="subjects[]" value="{{ profile_subjects[0] if profile_subjects else '' }}">
+                    <input type="text" name="subjects[]" value="{{ profile_subjects[1] if profile_subjects|length > 1 else '' }}">
+                </div>
+                <button type="button" onclick="addSubject()" class="add-subject-btn">Add Subject</button>
+            </div>
+
+            <button type="submit" class="save-btn">Save Changes</button>
+        </form>
+    </div>
+
+    <script>
+        function addSubject() {
+            const container = document.getElementById('subjects-container');
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.name = 'subjects[]';
+            input.placeholder = 'Enter subject';
+            container.appendChild(input);
+        }
+    </script>
+</body>
+</html>

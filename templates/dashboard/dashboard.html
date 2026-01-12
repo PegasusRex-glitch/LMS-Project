@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='css/dashboard.css') }}">
+    <link href="{{ url_for('static', path='css/navbar.css') }}" rel="stylesheet">
+</head>
+<body>
+    {% include '/dashboard/navbar.html' %}
+    <script src="{{ url_for('static', path='js/navbar.js') }}"></script>
+</body>
+</html>
