@@ -164,11 +164,25 @@ async def update_profile(
     """, (username, full_name, age, school, grade, stream, contact_info, address))
 
     # Update subjects: remove old ones, insert new ones
-    cursor.execute("DELETE FROM user_subjects WHERE username = ?", (username,))
+    # ---------------- SUBJECT HANDLING ----------------
+
+    # Remove empty values + duplicates
+    clean_subjects = list(set(
+        sub.strip() for sub in subjects if sub and sub.strip()
+    ))
+
+    # Delete old subjects
+    cursor.execute(
+        "DELETE FROM user_subjects WHERE username = ?",
+        (username,)
+    )
+
+    # Insert new subjects
     cursor.executemany(
         "INSERT INTO user_subjects (username, subject) VALUES (?, ?)",
-        [(username, sub) for sub in subjects if sub.strip() != ""]
+        [(username, sub) for sub in clean_subjects]
     )
+
 
     conn.commit()
     conn.close()
