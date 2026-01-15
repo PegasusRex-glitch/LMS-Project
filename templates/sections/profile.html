@@ -24,16 +24,12 @@
             <p><strong>Email:</strong> {{ email }}</p>
             <p><strong>Member Since:</strong> {{ created_at }}</p>
             <p><strong>Stream:</strong> {{ profile[4] if profile else 'Null' }}</p>
-
-            <div class="subjects-display">
-                <h4>Subjects</h4>
-            </div>
         </div>
     </div>
 
     <div class="upload-section">
         <h3>Edit Profile</h3>
-        <form method="post" action="/profile">
+        <form id="profile-form">
             <div class="form-group">
                 <label>Full Name</label>
                 <input type="text" name="full_name" value="{{ profile[0] if profile else '' }}" required>
@@ -80,6 +76,22 @@
     </div>
 
     <script>
+        
+        document.getElementById("profile-form").addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            const formData = new FormData(this);
+
+            const res = await fetch("/profile", {
+                method: "POST",
+                body: formData
+            });
+
+            if (res.ok) {
+                location.href = "/profile";
+            }
+        });
+
         function addSubject() {
             const name = prompt("Enter subject");
             if (!name) return;

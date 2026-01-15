@@ -11,7 +11,7 @@
         <div class="register-page-container">
             <div class="register_box">
                 <h2>Register</h2>
-                <form method="POST" action="/register">
+                <form id="register-form">
                     <div class="username_input">
                         <input type="text" name="username" required>
                         <label>Username</label>
@@ -24,10 +24,37 @@
                         <input type="password" name="password" required>
                         <label>Password</label>
                     </div>
+                    
+                    <p id="error" style="color: red; margin-top: 10px;"></p>
+                    
                     <button type="submit" class="register_button" id="register_page_button">Register</button>
                     <br>
                     <a href="login" class="login_link">Already have an account? Login</a>
                 </form>
             </div>
         </div>
+
+        <script>
+            document.getElementById("register-form").addEventListener("submit", async (e) => {
+                e.preventDefault();
+
+                const errorBox = document.getElementById("error");
+                errorBox.textContent = "";
+
+                try {
+
+                    const response = await fetch("/register", {method: "POST", body: new FormData(e.target)});
+
+                    const data = await response.json();
+
+                    if (response.ok) {
+                        window.location.href = "/login";
+                    } else {
+                        errorBox.textContent = data.detail || "Registration failed";
+                    }
+                } catch (err) {
+                    errorBox.textContent = "Server error. Please try again."
+                }
+            });
+        </script>
     </body>

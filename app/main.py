@@ -1,6 +1,6 @@
 import fastapi
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from typing import Annotated, Optional
 from fastapi import HTTPException
@@ -94,7 +94,8 @@ async def register(
     password: Annotated[str, fastapi.Form()],
 ):
     if register_user(username, email, password):
-        return RedirectResponse("/login", status_code=303)
+        response = JSONResponse({"success": True})
+        return response
     raise HTTPException(status_code=400, detail="User already exists")
 
 @app.post("/login")
@@ -104,11 +105,10 @@ async def login(
 ):
     user = login_user(username, password)
     if user:
-        response = RedirectResponse("/dashboard", status_code=303)
-        response.set_cookie(key="username", value=user, httponly=True)
+        response = JSONResponse({"success": True})
+        response.set_cookie("username", username, httponly=True)
         return response
-    return RedirectResponse("/login?error=Invalid+credentials", status_code=303)
-
+    raise HTTPException(status_code=401, detail="Invalid credentials")
 # Get the current user cookie
 def get_current_user(request: Request):
     username = request.cookies.get("username")
@@ -140,7 +140,7 @@ async def update_profile(
     stream: str = fastapi.Form(None),
     contact_info: str = fastapi.Form(None),
     address: str = fastapi.Form(None),
-    subjects: list[str] = fastapi.Form([]),  # multiple subjects
+    subjects: list[str] = fastapi.Form([])  # multiple subjects
 ):
     username = request.cookies.get("username")
     if not username:
@@ -187,7 +187,7 @@ async def update_profile(
     conn.commit()
     conn.close()
 
-    return RedirectResponse("/profile", status_code=303)
+    return JSONResponse({"status": "ok"})
 
 @app.get("/dashboard", response_class=HTMLResponse)
 async def dashboard(
