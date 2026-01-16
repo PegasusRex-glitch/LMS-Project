@@ -7,6 +7,46 @@
 </head>
 <body>
     {% include '/dashboard/navbar.html' %}
+
+    <div class="dashboard-container">
+        <h2>Welcome, {{ username }}</h2>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <h3>{{ subjects|length }}</h3>
+                <p>Subjects</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ completed_assignments }}</h3>
+                <p>Completed Assignments</p>
+            </div>
+            <div class="stat-card">
+                <h3>{{ progress }}%</h3>
+                <p>Overall Progress</p>
+            </div>
+        </div>
+
+        <div class="actions-container">
+            <a href="/profile" class="dashboard-btn">Profile</a>
+            <a href="/assignments" class="dashboard-btn">Assignments</a>
+            <a href="/tests" class="dashboard-btn">Tests</a>
+            <a href="/settings" class="dashboard-btn">Settings</a>
+        </div>
+
+        <div class="activity-container">
+            <h4>Recent Activity</h4>
+            <ul>
+                {% if recent_activity %}
+                    {% for title, status, date in recent_activity %}
+                        <li>{{ date }} - {{ title }} ({{ status }})</li>
+                    {% endfor %}
+                {% else %}
+                    <li>No recent activity</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', path='js/navbar.js') }}"></script>
 </body>
 </html>

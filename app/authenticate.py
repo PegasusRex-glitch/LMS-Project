@@ -8,14 +8,14 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     return conn
 
-def register_user(username, email, password):
+def register_user(username, email, password, verification_token, token_expires_at):
     hashed_password = Hasher.get_password_hash(password)
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO users (username, email, password) VALUES (?, ?, ?)",
-            (username, email, hashed_password)
+            "INSERT INTO users (username, email, password, is_verified, verification_token, token_expires_at) VALUES (?, ?, ?, 0, ?, ?)",
+            (username, email, hashed_password, verification_token, token_expires_at)
         )
         conn.commit()
         conn.close()

@@ -7,6 +7,8 @@ from fastapi import HTTPException
 from fastapi import Depends, Request
 import sqlite3
 import os
+import secrets
+from datetime import datetime,timedelta
 
 from .authenticate import register_user, login_user 
 from pathlib import Path
@@ -35,7 +37,10 @@ def init_db():
             username TEXT UNIQUE,
             email TEXT UNIQUE,
             password TEXT,
-            created_at TEXT DEFAULT (datetime('now'))
+            created_at TEXT DEFAULT (datetime('now')),
+            is_verified INTEGER,
+            verification_token TEXT,
+            token_expires_at TEXT
         )
     """)
 
@@ -62,10 +67,43 @@ def init_db():
             FOREIGN KEY(username) REFERENCES users(username));
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS assignments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL,
+            title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT DEFAULT (datetime('now')),
+            due_date TEXT,
+            FOREIGN KEY(username) REFERENCES users(username)
+        )
+    """)
+
+
     conn.commit()
     conn.close()
 
 init_db()
+
+def add_email_verification_columns():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    def column_exists(column_name):
+        cursor.execute("PRAGMA table_info(users)")
+        return any(col[1] == column_name for col in cursor.fetchall())
+    
+    if not column_exists("is_verified"):
+        cursor.execute("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0")
+
+    if not column_exists("verification_token"):
+        cursor.execute("ALTER TABLE users ADD COLUMN verification_token TEXT")
+    
+    if not column_exists("token_expires_at"):
+        cursor.execute("ALTER TABLE users ADD COLUMN token_expires_at TEXT")
+
+    conn.commit()
+    conn.close()
 
 
 @app.get("/", response_class=RedirectResponse)
@@ -87,16 +125,65 @@ async def register_page(request: fastapi.Request):
 #         {"request": request}
 #     )
 
+# To verify the user
+@app.get("/verify-email")
+async def verify_email(token: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT username, token_expires_at
+        FROM users
+        WHERE verification_token = ?
+    """, (token,))
+
+    row = cursor.fetchone()
+
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Invalid verification link")
+    
+    username, expires_at = row
+
+    if datetime.utcnow() > datetime.fromisoformat(expires_at):
+        conn.close()
+        raise HTTPException(status_code=400, detail="Verification link expired")
+    
+    cursor.execute("""
+        UPDATE users
+        SET is_verified = 1,
+            verification_token = NULL,
+            token_expires_at = NULL
+        WHERE username = ?
+    """, (username,))
+
+    conn.commit()
+    conn.close()
+
+    return RedirectResponse("/login?verified=true", status_code=303)
+
 @app.post("/register")
 async def register(
     username: Annotated[str, fastapi.Form()],
     email: Annotated[str, fastapi.Form()],
     password: Annotated[str, fastapi.Form()],
 ):
-    if register_user(username, email, password):
-        response = JSONResponse({"success": True})
-        return response
-    raise HTTPException(status_code=400, detail="User already exists")
+    
+    token = secrets.token_urlsafe(32)
+    expires_at = (datetime.utcnow() + timedelta(hours=24)).isoformat()
+
+    success = register_user(
+        username = username,
+        email = email,
+        password = password,
+        verification_token = token,
+        token_expires_at = expires_at
+    )
+
+    if success:
+        return JSONResponse({"success": True, "message": "Account created. Please verify your email."})
+    
+    return JSONResponse({"success": False, "detail": "User already exists"}, status_code=400)
 
 @app.post("/login")
 async def login(
@@ -140,7 +227,7 @@ async def update_profile(
     stream: str = fastapi.Form(None),
     contact_info: str = fastapi.Form(None),
     address: str = fastapi.Form(None),
-    subjects: list[str] = fastapi.Form([])  # multiple subjects
+    subjects: list[str] = fastapi.Form([])
 ):
     username = request.cookies.get("username")
     if not username:
@@ -190,18 +277,52 @@ async def update_profile(
     return JSONResponse({"status": "ok"})
 
 @app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard(
-    request: Request,
-    user = Depends(get_current_user)
-):
+async def dashboard(request: Request, user = Depends(get_current_user)):
     if not user:
         return RedirectResponse("/login", status_code=303)
 
     username, _, _ = user
 
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Fetch subjects
+    cursor.execute("SELECT subject FROM user_subjects WHERE username = ?", (username,))
+    subjects = [row[0] for row in cursor.fetchall()]
+
+    # Fetch completed assignment count 
+    cursor.execute("SELECT COUNT(*) FROM assignments WHERE username = ? AND status='completed'", (username,))
+    row = cursor.fetchone()
+    completed_assignments = row[0] if row else 0
+
+    # Calculate progress
+    cursor.execute("SELECT COUNT(*) FROM assignments WHERE username = ?", (username,))
+    row = cursor.fetchone()
+    total_assignments = row[0] if row else 0
+    progress = int((completed_assignments/total_assignments)*100) if total_assignments > 0 else 0
+
+    # Recent activity
+    cursor.execute("""
+        SELECT title, status, due_date
+        FROM assignments
+        WHERE username = ?
+        ORDER BY created_at DESC
+        LIMIT 5
+    """, (username,))
+    recent_activity = cursor.fetchall()
+
+    conn.close()
+
     return templates.TemplateResponse(
         "dashboard/dashboard.html",
-        {"request": request, "username": username}
+        {
+            "request": request, 
+            "username": username,
+            "subjects": subjects,
+            "completed_assignments": completed_assignments,
+            "progress": progress,
+            "recent_activity": recent_activity
+        }
     )
 
 @app.get("/logout")
