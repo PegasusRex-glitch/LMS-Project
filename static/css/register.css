@@ -1,4 +1,3 @@
-/* Reset */
 html, body {
     height: 100%;
     margin: 0;
@@ -11,7 +10,6 @@ html, body {
     font-family: "Segoe UI", Tahoma, sans-serif;
 }
 
-/* Full page background */
 .register-page-container {
     min-height: 100vh;
     width: 100%;
@@ -28,11 +26,10 @@ html, body {
     background-repeat: no-repeat;
 
     display: flex;
-    align-items: center;      /* vertical center */
-    justify-content: center;  /* horizontal center */
+    align-items: center;     
+    justify-content: center;  
 }
 
-/* Register box (glassmorphism) */
 .register_box {
     width: 380px;
     padding: 40px 35px;
@@ -48,7 +45,6 @@ html, body {
     animation: fadeUp 0.7s ease;
 }
 
-/* Title */
 .register_box h2 {
     text-align: center;
     margin-bottom: 30px;
@@ -56,7 +52,6 @@ html, body {
     letter-spacing: 1px;
 }
 
-/* Input container */
 .username_input,
 .email_input,
 .password_input {
@@ -64,7 +59,6 @@ html, body {
     margin-bottom: 25px;
 }
 
-/* Input fields */
 .username_input input,
 .email_input input,
 .password_input input {
@@ -78,7 +72,6 @@ html, body {
     font-size: 16px;
 }
 
-/* Floating labels */
 .username_input label,
 .email_input label,
 .password_input label {
@@ -92,7 +85,6 @@ html, body {
     transition: 0.3s ease;
 }
 
-/* Label animation */
 .username_input input:focus ~ label,
 .username_input input:valid ~ label,
 .email_input input:focus ~ label,
@@ -104,7 +96,6 @@ html, body {
     color: #00ffd5;
 }
 
-/* Submit button */
 .register_button {
     width: 100%;
     padding: 12px;
@@ -127,7 +118,6 @@ html, body {
     box-shadow: 0 8px 20px rgba(0, 255, 213, 0.4);
 }
 
-/* Login link */
 .login_link {
     display: block;
     margin-top: 18px;
@@ -142,7 +132,6 @@ html, body {
     text-decoration: underline;
 }
 
-/* Animation */
 @keyframes fadeUp {
     from {
         opacity: 0;

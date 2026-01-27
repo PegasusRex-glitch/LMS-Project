@@ -1,0 +1,131 @@
+import sqlite3
+import os
+from typing import Annotated
+import datetime
+from fastapi import HTTPException
+from fastapi.responses import RedirectResponse
+
+DB_path = os.path.join(os.path.dirname(__file__), "E:/LMS project/Data/prototype.db")
+
+class Database:
+    def __init__(self):
+        self.db_path = DB_path
+        if not os.path.isfile(self.db_path):
+            os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self.conn = sqlite3.connect(self.db_path)
+        print(f"Database: {os.path.abspath(self.db_path)}") # For debugging
+
+    def get_connection(self):
+        return sqlite3.connect(self.db_path)
+
+    def init_db(self):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                email TEXT UNIQUE,
+                password TEXT,
+                created_at TEXT DEFAULT (datetime('now')),
+                is_verified INTEGER,
+                verificayion_token TEXT,
+                token_expires_at TEXT    
+            )
+        """)
+
+        
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_profile (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE,
+                full_name TEXT,
+                age INTEGER,
+                school TEXT,
+                grade TEXT,
+                stream TEXT,
+                contact_info TEXT,
+                address TEXT,
+                FOREIGN KEY (username) REFERENCES users(username)
+            )
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_subjects (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                subject TEXT NOT NULL,
+                FOREIGN KEY(username) REFERENCES users(username));
+        """)
+
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS assignments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                title TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_at TEXT DEFAULT (datetime('now')),
+                due_date TEXT,
+                FOREIGN KEY(username) REFERENCES users(username)
+            )
+        """)
+
+
+        conn.commit()
+        conn.close()
+    
+    def add_email_verification_columns(self):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        def column_exists(column_name):
+            cursor.execute("PRAGMA table_info(users)")
+            return any(col[1] == column_name for col in cursor.fetchall())
+        
+        if not column_exists("is_verified"):
+            cursor.execute("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0")
+
+        if not column_exists("verification_token"):
+            cursor.execute("ALTER TABLE users ADD COLUMN verification_token TEXT")
+        
+        if not column_exists("token_expires_at"):
+            cursor.execute("ALTER TABLE users ADD COLUMN token_expires_at TEXT")
+
+        conn.commit()
+        conn.close()
+    
+    def verify_email(self, token: str):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT username, token_expires_at
+            FROM users
+            WHERE verification_token = ?
+        """, (token,))
+
+        row = cursor.fetchone()
+
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=400, detail="Invalid verification link")
+        
+        username, expires_at = row
+
+        if datetime.utcnow() > datetime.fromisoformat(expires_at):
+            conn.close()
+            raise HTTPException(status_code=400, detail="Verification link expired")
+        
+        cursor.execute("""
+            UPDATE users
+            SET is_verified = 1,
+                verification_token = NULL,
+                token_expires_at = NULL
+            WHERE username = ?
+        """, (username,))
+
+        conn.commit()
+        conn.close()
+
+        return RedirectResponse("/login?verified=true", status_code=303)

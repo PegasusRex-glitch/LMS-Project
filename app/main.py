@@ -10,6 +10,7 @@ import os
 import secrets
 from datetime import datetime,timedelta
 
+from app.db.database import Database
 from .authenticate import register_user, login_user 
 from pathlib import Path
 
@@ -27,83 +28,88 @@ templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 print("USING DATABASE:", os.path.abspath(DB_PATH))
 
-def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+db = Database()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            email TEXT UNIQUE,
-            password TEXT,
-            created_at TEXT DEFAULT (datetime('now')),
-            is_verified INTEGER,
-            verification_token TEXT,
-            token_expires_at TEXT
-        )
-    """)
+# def init_db():
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS user_profile (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE,
-            full_name TEXT,
-            age INTEGER,
-            school TEXT,
-            grade TEXT,
-            stream TEXT,
-            contact_info TEXT,
-            address TEXT,
-            FOREIGN KEY (username) REFERENCES users(username)
-        )
-    """)
+#     cursor.execute("""
+#         CREATE TABLE IF NOT EXISTS users (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             username TEXT UNIQUE,
+#             email TEXT UNIQUE,
+#             password TEXT,
+#             created_at TEXT DEFAULT (datetime('now')),
+#             is_verified INTEGER,
+#             verification_token TEXT,
+#             token_expires_at TEXT
+#         )
+#     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS user_subjects (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            subject TEXT NOT NULL,
-            FOREIGN KEY(username) REFERENCES users(username));
-    """)
+#     cursor.execute("""
+#         CREATE TABLE IF NOT EXISTS user_profile (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             username TEXT UNIQUE,
+#             full_name TEXT,
+#             age INTEGER,
+#             school TEXT,
+#             grade TEXT,
+#             stream TEXT,
+#             contact_info TEXT,
+#             address TEXT,
+#             FOREIGN KEY (username) REFERENCES users(username)
+#         )
+#     """)
 
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS assignments (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT NOT NULL,
-            title TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'pending',
-            created_at TEXT DEFAULT (datetime('now')),
-            due_date TEXT,
-            FOREIGN KEY(username) REFERENCES users(username)
-        )
-    """)
+#     cursor.execute("""
+#         CREATE TABLE IF NOT EXISTS user_subjects (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             username TEXT NOT NULL,
+#             subject TEXT NOT NULL,
+#             FOREIGN KEY(username) REFERENCES users(username));
+#     """)
+
+#     cursor.execute("""
+#         CREATE TABLE IF NOT EXISTS assignments (
+#             id INTEGER PRIMARY KEY AUTOINCREMENT,
+#             username TEXT NOT NULL,
+#             title TEXT NOT NULL,
+#             status TEXT NOT NULL DEFAULT 'pending',
+#             created_at TEXT DEFAULT (datetime('now')),
+#             due_date TEXT,
+#             FOREIGN KEY(username) REFERENCES users(username)
+#         )
+#     """)
 
 
-    conn.commit()
-    conn.close()
+#     conn.commit()
+#     conn.close()
 
-init_db()
+# init_db()
 
-def add_email_verification_columns():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+# def add_email_verification_columns():
+#     conn = sqlite3.connect(DB_PATH)
+#     cursor = conn.cursor()
 
-    def column_exists(column_name):
-        cursor.execute("PRAGMA table_info(users)")
-        return any(col[1] == column_name for col in cursor.fetchall())
+#     def column_exists(column_name):
+#         cursor.execute("PRAGMA table_info(users)")
+#         return any(col[1] == column_name for col in cursor.fetchall())
     
-    if not column_exists("is_verified"):
-        cursor.execute("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0")
+#     if not column_exists("is_verified"):
+#         cursor.execute("ALTER TABLE users ADD COLUMN is_verified INTEGER DEFAULT 0")
 
-    if not column_exists("verification_token"):
-        cursor.execute("ALTER TABLE users ADD COLUMN verification_token TEXT")
+#     if not column_exists("verification_token"):
+#         cursor.execute("ALTER TABLE users ADD COLUMN verification_token TEXT")
     
-    if not column_exists("token_expires_at"):
-        cursor.execute("ALTER TABLE users ADD COLUMN token_expires_at TEXT")
+#     if not column_exists("token_expires_at"):
+#         cursor.execute("ALTER TABLE users ADD COLUMN token_expires_at TEXT")
 
-    conn.commit()
-    conn.close()
+#     conn.commit()
+#     conn.close()
+
+db.init_db()
+db.add_email_verification_columns()
 
 
 @app.get("/", response_class=RedirectResponse)
@@ -250,10 +256,7 @@ async def update_profile(
             address = excluded.address
     """, (username, full_name, age, school, grade, stream, contact_info, address))
 
-    # Update subjects: remove old ones, insert new ones
-    # ---------------- SUBJECT HANDLING ----------------
-
-    # Remove empty values + duplicates
+    # Update subjects
     clean_subjects = list(set(
         sub.strip() for sub in subjects if sub and sub.strip()
     ))
