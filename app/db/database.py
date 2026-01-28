@@ -2,7 +2,7 @@ import sqlite3
 import os
 from typing import Annotated
 import datetime
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 DB_path = os.path.join(os.path.dirname(__file__), "E:/LMS project/Data/prototype.db")
@@ -12,11 +12,12 @@ class Database:
         self.db_path = DB_path
         if not os.path.isfile(self.db_path):
             os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
-        self.conn = sqlite3.connect(self.db_path)
         print(f"Database: {os.path.abspath(self.db_path)}") # For debugging
 
     def get_connection(self):
-        return sqlite3.connect(self.db_path)
+        conn = sqlite3.connect(self.db_path, timeout=10.0)
+        conn.isolation_level = None  # Autocommit mode
+        return conn
 
     def init_db(self):
         conn = self.get_connection()
@@ -113,7 +114,7 @@ class Database:
         
         username, expires_at = row
 
-        if datetime.utcnow() > datetime.fromisoformat(expires_at):
+        if datetime.datetime.now() > datetime.datetime.fromisoformat(expires_at):
             conn.close()
             raise HTTPException(status_code=400, detail="Verification link expired")
         
@@ -127,5 +128,32 @@ class Database:
 
         conn.commit()
         conn.close()
+    
+    def get_current_user(self, request: Request):
+        username = request.cookies.get("username")
+        if not username:
+            return None
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT username, email, created_at FROM users WHERE username = ?", (username,))
+        user = cursor.fetchone()
+        conn.close()
 
-        return RedirectResponse("/login?verified=true", status_code=303)
+        return user
+    
+    def update_user(self, username, full_name, age, school, grade, stream, contact_info, address):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+        INSERT INTO user_profile (username, full_name, age, school, grade, stream, contact_info, address)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(username) DO UPDATE SET
+            full_name = excluded.full_name,
+            age = excluded.age,
+            school = excluded.school,
+            grade = excluded.grade,
+            stream = excluded.stream,
+            contact_info = excluded.contact_info,
+            address = excluded.address
+        """, (username, full_name, age, school, grade, stream, contact_info, address))
