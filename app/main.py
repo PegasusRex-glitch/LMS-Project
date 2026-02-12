@@ -9,6 +9,7 @@ import sqlite3
 import os
 import secrets
 from datetime import datetime, timedelta, timezone
+from pydantic import BaseModel
 
 from app.db.database import Database
 from app.routes.auth import register_user, login_user 
@@ -23,7 +24,6 @@ app.mount(
     name="static"
 )
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "../Data/prototype.db")
 templates = Jinja2Templates(directory=BASE_DIR / "templates")
 
 # Initialize the DB
@@ -101,7 +101,7 @@ async def update_profile(
     if not username:
         return RedirectResponse("/login", status_code=303)
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db.get_connection()
     cursor = conn.cursor()
 
     db.update_user(username, full_name, age, school, grade, stream, contact_info, address)
@@ -135,7 +135,7 @@ async def dashboard(request: Request, user = Depends(db.get_current_user)):
 
     username, _, _ = user
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = db.get_connection()
     cursor = conn.cursor()
 
     # Fetch subjects
@@ -177,6 +177,40 @@ async def dashboard(request: Request, user = Depends(db.get_current_user)):
         }
     )
 
+class LessonPayload(BaseModel):
+    lesson: str
+
+@app.post("/dashboard/add-lesson")
+async def add_lesson(
+    request: Request,
+    payload: LessonPayload
+):
+    username = request.cookies.get("username")
+    
+    if not username:
+        raise HTTPException(status_code=401, detail="Not Authenticated")
+
+    lesson = payload.lesson.strip()
+    if not lesson:
+        return JSONResponse({"status": "nothing to add"})
+
+    conn = db.get_connection()
+    cursor = conn.cursor()
+
+    cursor.executemany(
+        "INSERT OR IGNORE INTO user_lessons (username, lesson) VALUES (?, ?)",
+        [(username, lesson)]
+    )
+
+    conn.commit()
+    conn.close()
+
+    return JSONResponse({
+        "Status": "Ok",
+        "added": 1
+    })
+
+
 @app.get("/logout")
 async def logout(response: fastapi.Response):
     response = RedirectResponse("/login")
@@ -193,7 +227,7 @@ async def profile(
 
     username, email, created_at = user
     created_date = created_at.split(" ")[0]
-    conn = sqlite3.connect(DB_PATH)
+    conn = db.get_connection()
     cursor = conn.cursor()
     cursor.execute("""
         SELECT full_name, age, school, grade, stream, contact_info, address

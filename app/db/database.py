@@ -5,7 +5,8 @@ import datetime
 from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-DB_path = os.path.join(os.path.dirname(__file__), "E:/LMS project/Data/prototype.db")
+# DB_path = os.path.join(os.path.dirname(__file__), "E:/LMS project/Data/prototype.db")
+DB_path = r"E:/LMS project/Data/prototype.db"
 
 class Database:
     def __init__(self):
@@ -16,7 +17,7 @@ class Database:
 
     def get_connection(self):
         conn = sqlite3.connect(self.db_path, timeout=10.0)
-        conn.isolation_level = None  # Autocommit mode
+        conn.isolation_level = "DEFERRED"  # Autocommit mode = None
         return conn
 
     def init_db(self):
@@ -57,7 +58,9 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
                 subject TEXT NOT NULL,
-                FOREIGN KEY(username) REFERENCES users(username));
+                UNIQUE(username, subject),
+                FOREIGN KEY(username) REFERENCES users(username)
+            )
         """)
 
         cursor.execute("""
@@ -72,6 +75,15 @@ class Database:
             )
         """)
 
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS user_lessons (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                lesson TEXT NOT NULL,
+                UNIQUE(username, lesson),
+                FOREIGN KEY(username) REFERENCES users(username)
+            )
+        """)
 
         conn.commit()
         conn.close()

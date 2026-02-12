@@ -47,6 +47,36 @@
         </div>
     </div>
 
+    <div class="dashboard-container-2">
+        <form id="remainder-subject-collect">
+            <div class="lesson-remainder">
+                <button class="add-lesson" type="button" onclick="addLesson()">Add a Lesson to forgetting curve</button>
+                {% include '/dashboard/forgettingcurve.html' %}
+            </div>
+        </form>
+    </div>
+
     <script src="{{ url_for('static', path='js/navbar.js') }}"></script>
+
+    <script>
+        async function addLesson() {
+            const lesson = prompt('Enter lesson')?.trim();
+            if (!lesson) return;
+
+            const res = await fetch("/dashboard/add-lesson", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({lesson})
+            });
+
+            if (res.ok) {
+                alert("Lesson saved");
+            } else {
+                alert("Failed to save lesson");
+            }
+        }
+    </script>
 </body>
 </html>
