@@ -80,6 +80,8 @@ class Database:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT NOT NULL,
                 lesson TEXT NOT NULL,
+                creation_date TEXT DEFAULT (datetime('now')),
+                last_studied_at TEXT,
                 UNIQUE(username, lesson),
                 FOREIGN KEY(username) REFERENCES users(username)
             )

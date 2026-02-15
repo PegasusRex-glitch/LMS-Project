@@ -31,6 +31,66 @@ db = Database()
 db.init_db()
 db.add_email_verification_columns()
 
+# Example in memory data
+# lesson_db = [
+#     {
+#         "id": 1,
+#         "name": "Trigonometry",
+#         "last_studied": "2026-02-05",
+#         "k": 0.15
+#     },
+#     {
+#         "id": 2,
+#         "name": "Mechanics",
+#         "last_studied": "2026-02-01",
+#         "k": 0.12
+#     }
+# ]
+
+default_k = 0.3
+
+@app.get("/api/forgetting-curves/{username}")
+def get_forgetting_curves(username: str):
+    conn = db.get_connection()
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT lesson, creation_date, last_studied_at
+        FROM user_lessons
+        WHERE username = ?
+    """, (username,))
+
+    lesson_db = cursor.fetchall()
+    conn.close()
+    today = datetime.now().date()
+    result = []
+
+    for lesson in lesson_db:
+        reference_date_str = lesson["last_studied_at"] or lesson["creation_date"]
+
+        reference_date = datetime.strptime(reference_date_str, "%Y-%m-%d %H:%M:%S")
+        days_passed = (today - reference_date.date()).days
+        curve = []
+
+        for day in range(days_passed + 1):
+            retention = 100 * (1 - default_k*day)
+            curve.append({
+                "x": day,
+                "y": round(retention, 2)
+            })
+        result.append({
+            "name": lesson["lesson"],
+            "curve": curve
+        })
+    return result
+
+@app.get("/api/current-user")
+async def get_current_user(request: Request):
+    username = request.cookies.get("username")
+    if not username:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    return {"username": username}
 
 @app.get("/", response_class=RedirectResponse)
 async def root():
