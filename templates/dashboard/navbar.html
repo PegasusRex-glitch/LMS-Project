@@ -8,7 +8,7 @@
     </button>
     <ul class="navbar-menu">
       <li><a href="{{ url_for('dashboard') }}" class="{% if request.url.path == '/dashboard' %}active{% endif %}">Dashboard</a></li>
-      <li><a href="#">Analysis</a></li>
+      <li><a href="{{ url_for('analysis') }}" class="{% if request.url.path == '/analysis' %}active{% endif %}">Analysis</a></li>
       <li><a href="{{ url_for('profile') }}" class="{% if request.url.path == '/profile'%}active{% endif %}">Profile</a></li>
       <li><a href="#">Settings</a></li>
       <li><a href="{{ url_for('logout') }}" class="{% if request.url.path == '/logout' %}{% endif %}">Logout</a></li>

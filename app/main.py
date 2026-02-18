@@ -31,59 +31,43 @@ db = Database()
 db.init_db()
 db.add_email_verification_columns()
 
-# Example in memory data
-# lesson_db = [
-#     {
-#         "id": 1,
-#         "name": "Trigonometry",
-#         "last_studied": "2026-02-05",
-#         "k": 0.15
-#     },
-#     {
-#         "id": 2,
-#         "name": "Mechanics",
-#         "last_studied": "2026-02-01",
-#         "k": 0.12
-#     }
-# ]
+# default_k = 0.3
 
-default_k = 0.3
+# @app.get("/api/forgetting-curves/{username}")
+# def get_forgetting_curves(username: str):
+#     conn = db.get_connection()
+#     conn.row_factory = sqlite3.Row
+#     cursor = conn.cursor()
 
-@app.get("/api/forgetting-curves/{username}")
-def get_forgetting_curves(username: str):
-    conn = db.get_connection()
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+#     cursor.execute("""
+#         SELECT lesson, creation_date, last_studied_at
+#         FROM user_lessons
+#         WHERE username = ?
+#     """, (username,))
 
-    cursor.execute("""
-        SELECT lesson, creation_date, last_studied_at
-        FROM user_lessons
-        WHERE username = ?
-    """, (username,))
+#     lesson_db = cursor.fetchall()
+#     conn.close()
+#     today = datetime.now().date()
+#     result = []
 
-    lesson_db = cursor.fetchall()
-    conn.close()
-    today = datetime.now().date()
-    result = []
+#     for lesson in lesson_db:
+#         reference_date_str = lesson["last_studied_at"] or lesson["creation_date"]
 
-    for lesson in lesson_db:
-        reference_date_str = lesson["last_studied_at"] or lesson["creation_date"]
+#         reference_date = datetime.strptime(reference_date_str, "%Y-%m-%d %H:%M:%S")
+#         days_passed = (today - reference_date.date()).days
+#         curve = []
 
-        reference_date = datetime.strptime(reference_date_str, "%Y-%m-%d %H:%M:%S")
-        days_passed = (today - reference_date.date()).days
-        curve = []
-
-        for day in range(days_passed + 1):
-            retention = 100 * (1 - default_k*day)
-            curve.append({
-                "x": day,
-                "y": round(retention, 2)
-            })
-        result.append({
-            "name": lesson["lesson"],
-            "curve": curve
-        })
-    return result
+#         for day in range(days_passed + 1):
+#             retention = 100 * (1 - default_k*day)
+#             curve.append({
+#                 "x": day,
+#                 "y": round(retention, 2)
+#             })
+#         result.append({
+#             "name": lesson["lesson"],
+#             "curve": curve
+#         })
+#     return result
 
 @app.get("/api/current-user")
 async def get_current_user(request: Request):
@@ -199,8 +183,8 @@ async def dashboard(request: Request, user = Depends(db.get_current_user)):
     cursor = conn.cursor()
 
     # Fetch subjects
-    cursor.execute("SELECT subject FROM user_subjects WHERE username = ?", (username,))
-    subjects = [row[0] for row in cursor.fetchall()]
+    # cursor.execute("SELECT COUNT(*) FROM user_subjects WHERE username = ?", (username,))
+    subjects = db.get_subjects_count(username)
 
     # Fetch completed assignment count 
     cursor.execute("SELECT COUNT(*) FROM assignments WHERE username = ? AND status='completed'", (username,))
@@ -276,6 +260,13 @@ async def logout(response: fastapi.Response):
     response = RedirectResponse("/login")
     response.delete_cookie("username")
     return response
+
+@app.get("/analysis", response_class=HTMLResponse, name="analysis")
+async def analysis_page(
+    request: Request
+):
+    return templates.TemplateResponse("sections/analysis.html", {"request": request})
+
 
 @app.get("/profile", response_class=HTMLResponse)
 async def profile(

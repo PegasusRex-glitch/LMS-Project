@@ -171,3 +171,21 @@ class Database:
             contact_info = excluded.contact_info,
             address = excluded.address
         """, (username, full_name, age, school, grade, stream, contact_info, address))
+
+        conn.commit()
+        conn.close()
+
+    def get_subjects_count(self, username):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT count(subject)
+            FROM user_subjects
+            WHERE username = ?
+        """, (username,))
+
+        count = cursor.fetchone()[0]
+        print(count)
+        return count
+

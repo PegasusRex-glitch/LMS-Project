@@ -13,7 +13,7 @@
 
         <div class="stats-container">
             <div class="stat-card">
-                <h3>{{ subjects|length }}</h3>
+                <h3>{{ subjects }}</h3>
                 <p>Subjects</p>
             </div>
             <div class="stat-card">
@@ -48,12 +48,7 @@
     </div>
 
     <div class="dashboard-container-2">
-        <form id="remainder-subject-collect">
-            <div class="lesson-remainder">
-                <button class="add-lesson" type="button" onclick="addLesson()">Add a Lesson to forgetting curve</button>
-                {% include '/dashboard/forgettingcurve.html' %}
-            </div>
-        </form>
+        
     </div>
 
     <script src="{{ url_for('static', path='js/navbar.js') }}"></script>
