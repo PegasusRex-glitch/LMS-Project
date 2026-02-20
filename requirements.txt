@@ -1,0 +1,12 @@
+fastapi
+pydantic
+aiosmtplib
+passlib
+jinja2
+python-dotenv
+sqlalchemy
+uvicorn
+python-multipart
+requests
+starlette
+aiosmtplib

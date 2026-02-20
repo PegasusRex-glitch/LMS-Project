@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  fastapi:
+    build: .
+    ports:
+      - "8000:8000"
+    depends_on:
+      - email-service
+    volumes:
+      - ./Data:/app/app/db/Data
+      - ./static:/app/static
+      - ./templates:/app/templates
+
+
+  email-service:
+    build: ./email-service
+    ports:
+      - "5000:5000"
+    environment:
+      - EMAIL_USER=amscbandara@gmail.com
+      - EMAIL_PASS=augjnmzslsqzyrpn
+

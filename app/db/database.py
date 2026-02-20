@@ -5,18 +5,19 @@ import datetime
 from fastapi import HTTPException, Request
 from fastapi.responses import RedirectResponse
 
-# DB_path = os.path.join(os.path.dirname(__file__), "E:/LMS project/Data/prototype.db")
-DB_path = r"E:/LMS project/Data/prototype.db"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DB_PATH = os.path.join(BASE_DIR, "Data", "prototype.db")
 
 class Database:
     def __init__(self):
-        self.db_path = DB_path
+        self.db_path = DB_PATH
         if not os.path.isfile(self.db_path):
             os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
         print(f"Database: {os.path.abspath(self.db_path)}") # For debugging
 
     def get_connection(self):
-        conn = sqlite3.connect(self.db_path, timeout=10.0)
+        # Increase timeout to 30 seconds to reduce 'database is locked' errors
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.isolation_level = "DEFERRED"  # Autocommit mode = None
         return conn
 
@@ -155,6 +156,19 @@ class Database:
 
         return user
     
+    def get_user_email(self, username):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT email
+            FROM users
+            WHERE username = ?
+        """, (username,))
+
+        result = cursor.fetchone()
+        conn.close()
+        return result
+    
     def update_user(self, username, full_name, age, school, grade, stream, contact_info, address):
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -188,4 +202,3 @@ class Database:
         count = cursor.fetchone()[0]
         print(count)
         return count
-

@@ -10,26 +10,27 @@ import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
+from fastapi import BackgroundTasks
+import asyncio
 
 from app.db.database import Database
 from app.routes.auth import register_user, login_user 
 from pathlib import Path
+from app.core.mail_sender import send_verification_email
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent
+DB_PATH = os.path.join(BASE_DIR, "Data", "prototype.db")
 
 app = fastapi.FastAPI()
-app.mount(
-    "/static",
-    StaticFiles(directory=BASE_DIR / "static"),
-    name="static"
-)
+app.mount("/static", StaticFiles(directory="/app/static"), name="static")
 
-templates = Jinja2Templates(directory=BASE_DIR / "templates")
-
+templates = Jinja2Templates(directory="/app/templates")
 # Initialize the DB
 db = Database()
 db.init_db()
 db.add_email_verification_columns()
+
+
 
 # default_k = 0.3
 
@@ -99,6 +100,7 @@ async def register(
     username: Annotated[str, fastapi.Form()],
     email: Annotated[str, fastapi.Form()],
     password: Annotated[str, fastapi.Form()],
+    background_tasks: BackgroundTasks
 ):
     
     token = secrets.token_urlsafe(32)
@@ -113,6 +115,8 @@ async def register(
     )
 
     if success:
+        verification_link = f"http://localhost:8000/verify_email?token={token}"
+        background_tasks.add_task(send_verification_email, email, verification_link)
         return JSONResponse({"success": True, "message": "Account created. Please verify your email."})
     
     return JSONResponse({"success": False, "detail": "User already exists"}, status_code=400)
