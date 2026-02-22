@@ -8,9 +8,13 @@ services:
     depends_on:
       - email-service
     volumes:
+      - .:/app
       - ./Data:/app/app/db/Data
       - ./static:/app/static
       - ./templates:/app/templates
+    environment:
+      - WATCHFILES_FORCE_POLLING=true
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 
   email-service:

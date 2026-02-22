@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', path='css/profile.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='css/navbar.css') }}">
 </head>
+
 <body>
     {% include 'dashboard/navbar.html' %}
 
@@ -14,9 +16,9 @@
         <h2>User Profile</h2>
 
         <div class="profile-photo">
-            <img src="{{ url_for('static', path='profile.jpg') }}" alt="Profile Photo">
+            <img src="{{ image_url }}?t={{ time}}" alt="Profile Photo" id="profile-pic">
             <input type="file" id="profile-upload" hidden>
-            <button onclick="document.getElementById('profile-upload').click()">Change Photo</button>
+            <button onclick="uploadProfilePhoto()">Change Photo</button>
         </div>
 
         <div class="profile-details">
@@ -54,72 +56,28 @@
             </div>
 
             <div class="form-group">
-            <h4>Subjects</h4>
+                <h4>Subjects</h4>
 
-            <div class="subject-chips">
-                {% for sub in subjects %}
+                <div class="subject-chips">
+                    {% for sub in subjects %}
                     <div class="subject-chip">
                         <span>{{ sub }}</span>
                         <button type="button" onclick="removeSubject(this)">×</button>
                         <input type="hidden" name="subjects" value="{{ sub }}">
                     </div>
-                {% endfor %}
-            </div>
+                    {% endfor %}
+                </div>
 
-            <button type="button" onclick="addSubject()" class="add-subject-btn">
-                Add Subject
-            </button>
+                <button type="button" onclick="addSubject()" class="add-subject-btn">
+                    Add Subject
+                </button>
             </div>
 
             <button type="submit" class="save-btn">Save Changes</button>
         </form>
     </div>
 
-    <script>
-        
-        document.getElementById("profile-form").addEventListener("submit", async function (e) {
-            e.preventDefault();
-
-            const formData = new FormData(this);
-
-            const res = await fetch("/profile", {
-                method: "POST",
-                body: formData
-            });
-
-            if (res.ok) {
-                location.href = "/profile";
-            }
-        });
-
-        function addSubject() {
-            const name = prompt("Enter subject");
-            if (!name) return;
-
-            const existing = document.querySelectorAll('input[name="subjects"]');
-            for (let input of existing) {
-                if (input.value.toLowerCase() === name.toLowerCase()) {
-                    alert("Subject already added");
-                    return;
-                }
-            }
-
-            const chip = document.createElement("div");
-            chip.className = "subject-chip";
-
-            
-            chip.innerHTML = `
-                <span>${name}</span>
-                <button type="button" onclick="removeSubject(this)">×</button>
-                <input type="hidden" name="subjects" value="${name}">
-            `;
-
-            document.querySelector(".subject-chips").appendChild(chip);
-        }
-
-        function removeSubject(btn) {
-            btn.parentElement.remove();
-        }
-    </script>
+    <script src="{{ url_for('static', path='js/profile.js') }}"></script>
 </body>
+
 </html>

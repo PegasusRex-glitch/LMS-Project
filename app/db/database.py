@@ -50,6 +50,7 @@ class Database:
                 stream TEXT,
                 contact_info TEXT,
                 address TEXT,
+                profile_image TEXT,
                 FOREIGN KEY (username) REFERENCES users(username)
             )
         """)
@@ -202,3 +203,30 @@ class Database:
         count = cursor.fetchone()[0]
         print(count)
         return count
+    
+    def update_profile_image(self, username, image_name):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+  
+            UPDATE user_profile
+            SET profile_image = ?
+            WHERE username = ?
+        """, (image_name, username))
+
+        conn.commit()
+        conn.close()
+    def get_profile_image(self, username):
+        conn = self.get_connection()
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT profile_image
+            FROM user_profile
+            WHERE username = ?
+        """, (username,))
+
+        result = cursor.fetchone()
+        conn.close()
+        return result[0] if result else None

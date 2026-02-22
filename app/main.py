@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from typing import Annotated, Optional
-from fastapi import HTTPException
+from fastapi import HTTPException, FastAPI, UploadFile, File
 from fastapi import Depends, Request
 import sqlite3
 import os
@@ -11,7 +11,8 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from pydantic import BaseModel
 from fastapi import BackgroundTasks
-import asyncio
+import time
+import shutil
 
 from app.db.database import Database
 from app.routes.auth import register_user, login_user 
@@ -300,6 +301,10 @@ async def profile(
 
     conn.close()
 
+    image_name = db.get_profile_image(username)
+    if not image_name:
+        image_name = "default.jpg"
+
     return templates.TemplateResponse(
         "sections/profile.html",
         {
@@ -308,6 +313,28 @@ async def profile(
             "email": email,
             "created_at": created_date,
             "profile": profile_data,
-            "subjects": subjects
+            "subjects": subjects,
+            "image_url": f"/static/profile_pics/{image_name}",
+            "time": int(time.time())
         }
     )
+
+@app.post("/profile/upload-photo")
+async def upload_photo(
+    file: UploadFile = File(...),
+    user = Depends(db.get_current_user)
+):
+    if not user:
+        raise RedirectResponse("/login", status_code=303)
+
+    username = user[0]
+
+    file_name = f"{username}.jpg"
+    file_path = f"static/profile_pics/{file_name}"
+
+    with open(file_path, 'wb') as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    db.update_profile_image(username, file_name)
+
+    return {"message": "Profile photo uploaded successfully"}
